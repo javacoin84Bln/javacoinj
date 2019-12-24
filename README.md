@@ -21,7 +21,7 @@ mvn clean install
  
 # Examples
  
-  Using the methods are provided in package com.javacoin.examples
+  Calling the rpc methods examples are provided in package com.javacoin.examples
   
  
 # Contact
