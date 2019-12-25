@@ -5,12 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.javacoin.rpc.JavacoinRpc;
+import com.javacoin.rpc.JavacoinRpcImpl;
 
 public class SendMany extends ConnectionData {
 	
 	public static void main(String[] args) {
 
-		JavacoinRpc javacoinRpc = new JavacoinRpc(username, password, host, port);
+		JavacoinRpc javacoinRpc = new JavacoinRpcImpl(username, password, host, port);
 		
 		// change map entries, addresses and amounts. 
 		Map<String,BigDecimal> hm = new HashMap<>();	

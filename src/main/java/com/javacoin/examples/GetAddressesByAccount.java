@@ -3,12 +3,13 @@ package com.javacoin.examples;
 import java.util.List;
 
 import com.javacoin.rpc.JavacoinRpc;
+import com.javacoin.rpc.JavacoinRpcImpl;
 
 public class GetAddressesByAccount extends ConnectionData {
 	
 	public static void main(String[] args) {
 
-		JavacoinRpc javacoinRpc = new JavacoinRpc(username, password, host, port);
+		JavacoinRpc javacoinRpc = new JavacoinRpcImpl(username, password, host, port);
 		
 		List<String> ax =	javacoinRpc.getAddressesByAccount("abc");
 		List<String> ax2 =	javacoinRpc.getAddressesByAccount("abcx");

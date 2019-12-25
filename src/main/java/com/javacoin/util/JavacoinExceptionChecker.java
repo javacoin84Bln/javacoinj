@@ -1,7 +1,5 @@
 package com.javacoin.util;
 
-import java.util.Objects;
-
 import org.apache.commons.lang3.StringUtils;
 
 import com.google.gson.JsonElement;
@@ -13,19 +11,16 @@ import com.javacoin.exception.JavacoinRpcException;
 
 public class JavacoinExceptionChecker {
 
-	private final static String ERROR = "error";
 	private final static String MESSAGE = "message";
 	private final static String ERROR_CODE = "code";
 
-	public void checkForError(JsonObject response, RpcMethods callMethod) throws JavacoinRpcException {
+	public void checkForError(JsonElement jElement, RpcMethods callMethod) throws JavacoinRpcException {
 
-		JsonElement jElement = response.get(ERROR);
-
-		if (Objects.nonNull(jElement) && jElement.isJsonObject()) {
 			JsonObject errorJson = jElement.getAsJsonObject();
+			
 			String message = errorJson.get(MESSAGE).getAsString();
-
 			int errorCode = errorJson.get(ERROR_CODE).getAsInt();
+			
 			switch (errorCode) {
 			case -5:
 				throw new InvalidJavacoinaddressException(message);
@@ -36,6 +31,6 @@ public class JavacoinExceptionChecker {
 			default:
 				throw new JavacoinRpcException(message + StringUtils.SPACE + callMethod);
 			}
-		}
+		
 	}
 }
