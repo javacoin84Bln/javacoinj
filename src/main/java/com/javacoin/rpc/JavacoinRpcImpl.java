@@ -2,21 +2,26 @@ package com.javacoin.rpc;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
-import org.apache.http.protocol.HTTP;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.util.EntityUtils;
 
-import com.gargoylesoftware.htmlunit.BrowserVersion;
-import com.gargoylesoftware.htmlunit.HttpMethod;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.WebRequest;
-import com.gargoylesoftware.htmlunit.WebResponse;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -50,28 +55,42 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 	private final static String RESULT = "result";
 	private final static String HTTP_PREFIX = "http://";
 	private final static String COLON = ":";
-	private final static String AT = "@";
 	private final static String FORWARD_SLASH = "/";
 	private final static String NEW_LINE = "\n";
+	private final static ContentType CONTENT_TYPE = ContentType.create("application/json", StandardCharsets.UTF_8);
 
 	private final Gson gson = new Gson();
-	private WebClient client;
+	private HttpClient client;
+	private PoolingHttpClientConnectionManager connectionManager; 
 	private String url;
 	private final JavacoinExceptionChecker exceptionChecker = new JavacoinExceptionChecker();
 
 	public JavacoinRpcImpl(String username, String password, String host, int port) throws InvalidCredentialsException {
 		try {
-			
-			client = new WebClient(BrowserVersion.CHROME);
-			client.getOptions().setThrowExceptionOnFailingStatusCode(false);
-			client.getOptions().setThrowExceptionOnScriptError(false);
-			client.getOptions().setPrintContentOnFailingStatusCode(false);
-			client.getOptions().setJavaScriptEnabled(false);
-			client.getOptions().setCssEnabled(false);
 						
-			url = HTTP_PREFIX + username + COLON + password + AT + host + COLON + port + FORWARD_SLASH;			
+			url = HTTP_PREFIX + host + COLON + port + FORWARD_SLASH;	
 			
-			if (HttpStatus.SC_UNAUTHORIZED == client.getPage(url).getWebResponse().getStatusCode()) {
+			
+			CredentialsProvider provider = ConnectionHelper.BasicCredentialsProvider(username, password);
+		
+			connectionManager = new PoolingHttpClientConnectionManager();
+		    connectionManager.setMaxTotal(100);
+		    connectionManager.setDefaultMaxPerRoute(8);
+			
+			
+			client = HttpClients.custom()
+					  .setConnectionManager(connectionManager)
+					  .setConnectionTimeToLive(10, TimeUnit.MILLISECONDS)
+					  .setUserAgent("Mozilla/5.0 Firefox/26.0")
+					  .setDefaultCredentialsProvider(provider)
+					  .build();
+		    
+			
+			
+			HttpResponse response = client.execute(new HttpGet(url));
+	
+			
+			if (HttpStatus.SC_UNAUTHORIZED == response.getStatusLine().getStatusCode()) {
 				throw new InvalidCredentialsException();}
 			
 		} catch (Exception e) {
@@ -370,18 +389,23 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 
 	private JsonObject callRpcMethod(RpcMethods callMethod, Object... params) throws ApiCallRpcException {
 		try {
-			WebRequest request = new WebRequest(new URL(url), HttpMethod.POST);
-			request.setAdditionalHeader(HTTP.CONTENT_TYPE, ContentType.APPLICATION_JSON.toString());
 
 			JsonRequest body = new JsonRequest();
+			body.setId(UUID.randomUUID().toString());
 			body.setMethod(callMethod.toString());
 			if (Objects.nonNull(params) && params.length > 0) {
 				body.setParams(params);
 			}
-
-			request.setRequestBody(gson.toJson(body, JsonRequest.class));
-			WebResponse response = client.getPage(request).getWebResponse();
-			JsonObject jsonObj = JsonParser.parseString(response.getContentAsString()).getAsJsonObject();
+			String requestJson = gson.toJson(body);
+				
+			HttpPost postRequest = new HttpPost(url);
+			postRequest.setEntity(new StringEntity(requestJson, CONTENT_TYPE));	
+		
+			HttpResponse  response = client.execute(postRequest);
+			
+	        String responseString = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);	
+	      			
+			JsonObject jsonObj = JsonParser.parseString(responseString).getAsJsonObject();
 
 		  JsonElement jElement = jsonObj.get(ERROR);	
 		  if (Objects.nonNull(jElement) && jElement.isJsonObject()) {
