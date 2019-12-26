@@ -44,6 +44,8 @@ public interface JavacoinRpc {
 	BigInteger getNetworkHashps(int NumberOfBlocks, int blockHeight) throws JavacoinRpcException;
 
 	List<String> help() throws JavacoinRpcException;
+	
+	List<String> help(String command) throws JavacoinRpcException;
 
 	String getAccount(String address) throws JavacoinRpcException;
 
@@ -114,5 +116,7 @@ public interface JavacoinRpc {
 			throws JavacoinRpcException;
 
 	boolean validateAddress(String address) throws JavacoinRpcException;
+
+
 
 }

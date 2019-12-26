@@ -149,6 +149,12 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 		JsonObject jsonObj = callRpcMethod(RpcMethods.HELP);
 		return Arrays.asList(jsonObj.get(RESULT).getAsString().split(NEW_LINE));
 	}
+	
+	@Override
+	public List<String> help(String command) throws JavacoinRpcException {
+		JsonObject jsonObj = callRpcMethod(RpcMethods.HELP,command);
+		return Arrays.asList(jsonObj.get(RESULT).getAsString().split(NEW_LINE));
+	}
 
 	@Override
 	public String getAccount(String address) throws JavacoinRpcException {

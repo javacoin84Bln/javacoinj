@@ -1,5 +1,8 @@
 package com.javacoin.util;
 
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
 public enum RpcMethods {
 
 	ADD_NODE("addnode"),
@@ -45,15 +48,13 @@ public enum RpcMethods {
 	SET_TX_FEE("settxfee"),		
 	VALIDATE_ADDRESS("validateaddress");
 
-    private String value;
-
-    private RpcMethods(String value) {
-        this.value = value;
-    }
-
-    @Override
-    public String toString() {
-        return value;
-    }
-
+	private String value;
+	
+	@Override
+	public String toString() {
+		return value;
+	}
+	
+	
+	
 }
