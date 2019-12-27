@@ -5,15 +5,16 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.junit.FixMethodOrder;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.runners.MethodSorters;
 
 import com.javacoin.model.Block;
 import com.javacoin.model.GetInfo;
@@ -23,11 +24,21 @@ import com.javacoin.rpc.JavacoinRpc;
 import com.javacoin.rpc.JavacoinRpcImpl;
 
 
-@FixMethodOrder(MethodSorters.DEFAULT)
+
 public class AllInOne {
+	
+	private JavacoinRpc javacoinRpc;
 
-	private JavacoinRpc javacoinRpc = new JavacoinRpcImpl("phoenix1", "java1", "localhost", 26302);
+	@Before
+	public void setup() {
+		javacoinRpc = new JavacoinRpcImpl("phoenix1", "java1", "localhost", 26302);
+	}
 
+	@After
+	public void finish() throws IOException {
+		javacoinRpc.closeClient();
+	}
+	 	
 	
 	@Test
 	public void testGetInfo() {

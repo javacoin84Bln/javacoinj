@@ -1,5 +1,6 @@
 package com.javacoin.rpc;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
@@ -116,6 +117,8 @@ public interface JavacoinRpc {
 			throws JavacoinRpcException;
 
 	boolean validateAddress(String address) throws JavacoinRpcException;
+
+	void closeClient() throws IOException;
 
 
 

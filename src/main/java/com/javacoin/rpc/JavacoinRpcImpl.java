@@ -1,5 +1,6 @@
 package com.javacoin.rpc;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -7,18 +8,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 
@@ -60,44 +60,39 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 	private final static ContentType CONTENT_TYPE = ContentType.create("application/json", StandardCharsets.UTF_8);
 
 	private final Gson gson = new Gson();
-	private HttpClient client;
-	private PoolingHttpClientConnectionManager connectionManager; 
+	private CloseableHttpClient client;
+	private PoolingHttpClientConnectionManager connectionManager;
 	private String url;
 	private final JavacoinExceptionChecker exceptionChecker = new JavacoinExceptionChecker();
 
 	public JavacoinRpcImpl(String username, String password, String host, int port) throws InvalidCredentialsException {
 		try {
-						
-			url = HTTP_PREFIX + host + COLON + port + FORWARD_SLASH;	
-			
-			
+
+			url = HTTP_PREFIX + host + COLON + port + FORWARD_SLASH;
+
 			CredentialsProvider provider = ConnectionHelper.BasicCredentialsProvider(username, password);
-		
+			
 			connectionManager = new PoolingHttpClientConnectionManager();
-		    connectionManager.setMaxTotal(100);
-		    connectionManager.setDefaultMaxPerRoute(8);
-			
-			
-			client = HttpClients.custom()
-					  .setConnectionManager(connectionManager)
-					  .setConnectionTimeToLive(10, TimeUnit.MILLISECONDS)
-					  .setUserAgent("Mozilla/5.0 Firefox/26.0")
-					  .setDefaultCredentialsProvider(provider)
-					  .build();
-		    
-			
-			
-			HttpResponse response = client.execute(new HttpGet(url));
+			connectionManager.setMaxTotal(100);
+			connectionManager.setDefaultMaxPerRoute(10);
 	
-			
+
+		   client = HttpClientBuilder.create()
+					.setConnectionManager(connectionManager)					
+					.setDefaultCredentialsProvider(provider)
+					.build();
+
+			HttpResponse response = client.execute(new HttpGet(url));
+
 			if (HttpStatus.SC_UNAUTHORIZED == response.getStatusLine().getStatusCode()) {
-				throw new InvalidCredentialsException();}
-			
+				throw new InvalidCredentialsException();
+			}
+
 		} catch (Exception e) {
-			log.error("Authenticating with javacoin server", e);
+			log.error("Authenticating with javacoin server failed.", e);
 		}
 	}
-
+	
 	@Override
 	public void addNode(String ip, String command) throws JavacoinRpcException {
 		callRpcMethod(RpcMethods.ADD_NODE, ip, command);
@@ -168,10 +163,10 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 		JsonObject jsonObj = callRpcMethod(RpcMethods.HELP);
 		return Arrays.asList(jsonObj.get(RESULT).getAsString().split(NEW_LINE));
 	}
-	
+
 	@Override
 	public List<String> help(String command) throws JavacoinRpcException {
-		JsonObject jsonObj = callRpcMethod(RpcMethods.HELP,command);
+		JsonObject jsonObj = callRpcMethod(RpcMethods.HELP, command);
 		return Arrays.asList(jsonObj.get(RESULT).getAsString().split(NEW_LINE));
 	}
 
@@ -386,30 +381,36 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 		JsonObject jsonObj = callRpcMethod(RpcMethods.VALIDATE_ADDRESS, address);
 		return jsonObj.get(RESULT).getAsJsonObject().get(IS_VALID).getAsBoolean();
 	}
+	
+	@Override
+	public void closeClient() throws IOException {
+		client.close();
+	}
 
 	private JsonObject callRpcMethod(RpcMethods callMethod, Object... params) throws ApiCallRpcException {
 		try {
 
 			JsonRequest body = new JsonRequest();
-			body.setId(UUID.randomUUID().toString());
+			//body.setId(UUID.randomUUID().toString());
 			body.setMethod(callMethod.toString());
 			if (Objects.nonNull(params) && params.length > 0) {
 				body.setParams(params);
 			}
 			String requestJson = gson.toJson(body);
-				
+
 			HttpPost postRequest = new HttpPost(url);
-			postRequest.setEntity(new StringEntity(requestJson, CONTENT_TYPE));	
-		
-			HttpResponse  response = client.execute(postRequest);
+			postRequest.setEntity(new StringEntity(requestJson, CONTENT_TYPE));
+
+			CloseableHttpResponse response = client.execute(postRequest);
+
+			String responseString = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+			response.close();
 			
-	        String responseString = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);	
-	      			
 			JsonObject jsonObj = JsonParser.parseString(responseString).getAsJsonObject();
 
-		  JsonElement jElement = jsonObj.get(ERROR);	
-		  if (Objects.nonNull(jElement) && jElement.isJsonObject()) {
-			  exceptionChecker.checkForError(jElement, callMethod);
+			JsonElement jElement = jsonObj.get(ERROR);
+			if (Objects.nonNull(jElement) && jElement.isJsonObject()) {
+				exceptionChecker.checkForError(jElement, callMethod);
 			}
 
 			return jsonObj;
@@ -417,4 +418,7 @@ public class JavacoinRpcImpl implements JavacoinRpc {
 			throw new ApiCallRpcException(e.getMessage());
 		}
 	}
+
+
+
 }
