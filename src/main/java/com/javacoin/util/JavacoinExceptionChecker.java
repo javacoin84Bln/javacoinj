@@ -8,6 +8,7 @@ import com.javacoin.exception.InsufficientFundsException;
 import com.javacoin.exception.InvalidAccountNameException;
 import com.javacoin.exception.InvalidJavacoinaddressException;
 import com.javacoin.exception.JavacoinRpcException;
+import com.javacoin.exception.TransactionTooLargeException;
 
 public class JavacoinExceptionChecker {
 
@@ -22,12 +23,14 @@ public class JavacoinExceptionChecker {
 			int errorCode = errorJson.get(ERROR_CODE).getAsInt();
 			
 			switch (errorCode) {
+			case -4:
+				throw new TransactionTooLargeException(message);
 			case -5:
 				throw new InvalidJavacoinaddressException(message);
-			case -11:
-				throw new InvalidAccountNameException(message);
 			case -6:
 				throw new InsufficientFundsException(message);
+			case -11:
+				throw new InvalidAccountNameException(message);
 			default:
 				throw new JavacoinRpcException(message + StringUtils.SPACE + callMethod);
 			}
